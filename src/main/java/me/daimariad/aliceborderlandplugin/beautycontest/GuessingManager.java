@@ -31,10 +31,7 @@ public class GuessingManager implements Listener {
 
     public void rulesBrokenHandler(Player player, AsyncPlayerChatEvent event) {
         event.setCancelled(true);
-        player.sendMessage(ChatColor.RED + "You have broken the rules!");
-        for (GameManager game : btg.values()) {
-            game.gameOver(player);
-        }
+        player.sendMessage("Please respect the rules of the game, or" + ChatColor.RED + " death " + "will strike you ... literally :)");
     }
 
     @EventHandler

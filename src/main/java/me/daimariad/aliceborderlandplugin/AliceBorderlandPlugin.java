@@ -59,7 +59,6 @@ public final class AliceBorderlandPlugin extends JavaPlugin implements Listener 
                 case 0: {
                     bcp.btgRegistrationHandler(player);
                     player.closeInventory();
-                    player.sendTitle("Welcome " + player.getName(), "§cTo the beauty contest.");
                     break;
                 }
                 case 1: {

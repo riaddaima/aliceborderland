@@ -100,11 +100,13 @@ public class GameManager implements Listener {
         return getAvgRoundWinner(answer, validRoundPlayers);
     }
 
-    public void gameOver(Player player) {
+    public void gameOver(Contestant contestant) {
+        Player player = contestant.getPlayer();
         scheduler.runTask(instance, () -> {
             player.getWorld().strikeLightningEffect(player.getLocation());
             player.setHealth(0.0);
         });
+        contestant.getBoard().delete();
         players.remove(player.getUniqueId());
         System.gc();
         // Handle secondRoundHandler()
@@ -128,7 +130,7 @@ public class GameManager implements Listener {
             else {
                 contestant.decreasePoints();
                 if (contestant.getPoints() <= -10) {
-                    gameOver(contestant.getPlayer());
+                    gameOver(contestant);
                     theFallen.add(contestant.getPlayer().getUniqueId());
                     someoneLost = true;
                 }
@@ -179,7 +181,7 @@ public class GameManager implements Listener {
             else {
                 contestant.decreasePoints();
                 if (contestant.getPoints() <= -10) {
-                    gameOver(contestant.getPlayer());
+                    gameOver(contestant);
                     someoneLost = true;
                 }
             }
