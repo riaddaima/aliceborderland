@@ -106,14 +106,16 @@ public class GameManager implements Listener {
             player.getWorld().strikeLightningEffect(player.getLocation());
             player.setHealth(0.0);
         });
-        contestant.getBoard().delete();
-        players.remove(player.getUniqueId());
-        System.gc();
-        // Handle secondRoundHandler()
-        // 2 or even 3 players may even be game over from first round.
     }
 
-    public void secondRoundHandler () {
+    public void cleanFallenHandler(ArrayList<Contestant> theFallen) {
+        for (Contestant contestant : theFallen) {
+            contestant.getBoard().delete();
+            players.remove(contestant.getPlayer().getUniqueId());
+        }
+    }
+
+    public void thirdRoundHandler () {
         Integer currentSizePlayers = players.size();
         Double answer = 0.0;
         for (Contestant contestant : players.values()) {
@@ -121,17 +123,20 @@ public class GameManager implements Listener {
         }
         answer *= 0.8/currentSizePlayers;
         UUID winner = getSecondRoundWinner(answer);
+        Integer winnerGuess = players.get(winner).getGuessNumber();
+        boolean exactGuess = winnerGuess.compareTo(answer.intValue()) == 0;
 
         boolean someoneLost = false;
-        ArrayList<UUID> theFallen = new ArrayList<>();
+        ArrayList<Contestant> theFallen = new ArrayList<>();
 
         for (Contestant contestant : players.values()) {
             if (winner != null && contestant.getPlayer().getUniqueId() == winner) contestant.increasePoints();
             else {
+                if (exactGuess) contestant.decreasePoints();
                 contestant.decreasePoints();
                 if (contestant.getPoints() <= -10) {
                     gameOver(contestant);
-                    theFallen.add(contestant.getPlayer().getUniqueId());
+                    theFallen.add(contestant);
                     someoneLost = true;
                 }
             }
@@ -147,6 +152,66 @@ public class GameManager implements Listener {
             }
             player.getBoard().updateLines(lines);
         }
+
+        cleanFallenHandler(theFallen);
+        roundResetHandler();
+        if (someoneLost) {
+            // Forth round starts.
+            System.out.println(players.size());
+            if (players.size() == 1) {
+                // Logic here if there is already a winner from the start of first round.
+                Player finalWinner = players.get(winner).getPlayer();
+                finalWinner.getServer().broadcastMessage(ChatColor.BLUE + finalWinner.getName() + ChatColor.WHITE + " is the winner of the " + ChatColor.RED + "beauty contest #" + gameId.getAndIncrement());
+                scheduler.runTask(instance, () -> {
+                    finalWinner.getWorld().spawnEntity(finalWinner.getLocation(), EntityType.FIREWORK);
+                });
+                // Removing winner from players list since game has ended.
+                players.get(winner).getBoard().delete();
+                players.remove(winner);
+                hasStarted = false;
+                this.guessingInstance.cleanGame(gameId.intValue());
+            }
+            return;
+        }
+        thirdRoundHandler();
+    }
+
+    public void secondRoundHandler () {
+        Integer currentSizePlayers = players.size();
+        Double answer = 0.0;
+        for (Contestant contestant : players.values()) {
+            answer += contestant.getGuessNumber();
+        }
+        answer *= 0.8/currentSizePlayers;
+        UUID winner = getSecondRoundWinner(answer);
+
+        boolean someoneLost = false;
+        ArrayList<Contestant> theFallen = new ArrayList<>();
+
+        for (Contestant contestant : players.values()) {
+            if (winner != null && contestant.getPlayer().getUniqueId() == winner) contestant.increasePoints();
+            else {
+                contestant.decreasePoints();
+                if (contestant.getPoints() <= -10) {
+                    gameOver(contestant);
+                    theFallen.add(contestant);
+                    someoneLost = true;
+                }
+            }
+        }
+        for (Contestant player : players.values()) {
+            ArrayList<String> lines = new ArrayList<>();
+
+            lines.add("");
+            lines.add(ChatColor.GREEN + "Scores:");
+            lines.add("");
+            for (Contestant contestant : players.values()) {
+                lines.add(ChatColor.GOLD + contestant.getPlayer().getName() + ": " + contestant.getPoints());
+            }
+            player.getBoard().updateLines(lines);
+        }
+
+        cleanFallenHandler(theFallen);
         roundResetHandler();
         if (someoneLost) {
             // Third round starts.
@@ -158,6 +223,7 @@ public class GameManager implements Listener {
                     finalWinner.getWorld().spawnEntity(finalWinner.getLocation(), EntityType.FIREWORK);
                 });
                 // Removing winner from players list since game has ended.
+                players.get(winner).getBoard().delete();
                 players.remove(winner);
                 hasStarted = false;
                 this.guessingInstance.cleanGame(gameId.intValue());
@@ -175,6 +241,7 @@ public class GameManager implements Listener {
         UUID winner = getAvgRoundWinner(answer, players);
 
         boolean someoneLost = false;
+        ArrayList<Contestant> theFallen = new ArrayList<>();
 
         for (Contestant contestant : players.values()) {
             if (contestant.getPlayer().getUniqueId() == winner) contestant.increasePoints();
@@ -182,6 +249,7 @@ public class GameManager implements Listener {
                 contestant.decreasePoints();
                 if (contestant.getPoints() <= -10) {
                     gameOver(contestant);
+                    theFallen.add(contestant);
                     someoneLost = true;
                 }
             }
@@ -197,6 +265,8 @@ public class GameManager implements Listener {
             }
             player.getBoard().updateLines(lines);
         }
+
+        cleanFallenHandler(theFallen);
         roundResetHandler();
         if (someoneLost) {
             // Second round starts.
@@ -208,6 +278,7 @@ public class GameManager implements Listener {
                     finalWinner.getWorld().spawnEntity(finalWinner.getLocation(), EntityType.FIREWORK);
                 });
                 // Removing winner from players list since game has ended.
+                players.get(winner).getBoard().delete();
                 players.remove(winner);
                 hasStarted = false;
                 this.guessingInstance.cleanGame(gameId.intValue());

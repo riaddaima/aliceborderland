@@ -7,6 +7,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -15,6 +16,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public final class AliceBorderlandPlugin extends JavaPlugin implements Listener {
 
@@ -33,13 +35,16 @@ public final class AliceBorderlandPlugin extends JavaPlugin implements Listener 
     public void onDisable() {
         // Plugin shutdown logic
     }
-
+    @EventHandler
+    public void onPlayerDeathDrop(PlayerDeathEvent e) {
+        e.getDrops().clear();
+        e.setKeepInventory(true);
+    }
     @EventHandler
     public void onItemRightClick(PlayerInteractEvent event) {
         try {
             ItemStack clickedItem = event.getItem();
-            System.out.println(clickedItem.getItemMeta().getDisplayName());
-            if (clickedItem.getItemMeta() != null && clickedItem.getItemMeta().getDisplayName().equals(menuOpenerItemTitle)) {
+            if (clickedItem != null && clickedItem.getItemMeta().getDisplayName().equals(menuOpenerItemTitle)) {
                 Player player = event.getPlayer();
                 GamesMenu gamesMenu = new GamesMenu(player, this);
                 player.openInventory(gamesMenu.getGamesMenu());
@@ -54,19 +59,24 @@ public final class AliceBorderlandPlugin extends JavaPlugin implements Listener 
     public void onInventoryClick(InventoryClickEvent event) {
         try {
             Player player = (Player) event.getWhoClicked();
-            int slot = event.getSlot();
-            switch (slot) {
-                case 0: {
-                    bcp.btgRegistrationHandler(player);
-                    player.closeInventory();
-                    break;
+            ItemStack item = event.getCurrentItem();
+            if (item.getItemMeta() != null) {
+                switch (item.getItemMeta().getCustomModelData()) {
+                    case 26: {
+                        bcp.btgRegistrationHandler(player);
+                        event.setCancelled(true);
+                        player.closeInventory();
+                        break;
+                    }
+                    case 27: {
+                        System.out.println("You clicked on another contest");
+                        event.setCancelled(true);
+                        player.closeInventory();
+                        break;
+                    }
+                    default:
+                        break;
                 }
-                case 1: {
-                    System.out.println("You clicked on another contest");
-                    break;
-                }
-                default:
-                    break;
             }
         } catch (Exception err) {
             System.out.println(err.getMessage());

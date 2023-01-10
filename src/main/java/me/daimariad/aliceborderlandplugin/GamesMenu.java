@@ -24,7 +24,7 @@ public class GamesMenu {
         Inventory inv = Bukkit.createInventory(player, 9 * 3, invTitle);
         inv.setItem(0, this.instance.createItemWithCustomModel(new ItemStack(Material.PAPER), ChatColor.RED + "Beauty Contest", 26,
                 ChatColor.BLUE + "Current games: 0", ChatColor.GREEN + "Current players: 0"));
-        inv.setItem(1, this.instance.createItem(new ItemStack(Material.DIAMOND_SWORD), ChatColor.RED + "Another Contest",
+        inv.setItem(1, this.instance.createItemWithCustomModel(new ItemStack(Material.PAPER), ChatColor.RED + "Another Contest", 27,
                 ChatColor.BLUE + "Current games: 0", ChatColor.GREEN + "Current players: 0"));
         return inv;
     }
