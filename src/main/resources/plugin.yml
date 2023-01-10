@@ -1,0 +1,4 @@
+name: aliceborderland
+version: '${project.version}'
+main: me.daimariad.aliceborderlandplugin.AliceBorderlandPlugin
+api-version: 1.19
