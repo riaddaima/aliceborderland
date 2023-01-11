@@ -50,7 +50,7 @@ public class BeautyContestPlugin {
             player.sendTitle("Welcome " + player.getName(), "§cTo the beauty contest.");
             // Handle games max capacity logic.
             System.out.println("Someone registered, total players: " + guessManager.btg.get(btgSize - 1).getPlayers().size());
-            if (guessManager.btg.get(btgSize - 1).getPlayers().size() == 2) {
+            if (guessManager.btg.get(btgSize - 1).getPlayers().size() == 5) {
                 // START GAME FOR THAT GAME
                 guessManager.btg.get(btgSize - 1).startGame();
                 GameManager nextNewGame = new GameManager(this.instance, guessManager);

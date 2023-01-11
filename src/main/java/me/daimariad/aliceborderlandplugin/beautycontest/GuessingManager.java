@@ -66,9 +66,8 @@ public class GuessingManager implements Listener {
                             System.out.println(sender.getName() + " guessed " + senderGuess);
                             game.getPlayers().get(playerId).setGuessNumber(senderGuess);
                             game.guessEntries += 1;
-                            System.out.println(game.guessEntries + " " + game.maxPlayers);
-                            if (game.guessEntries == game.maxPlayers) {
-                                game.thirdRoundHandler();
+                            if (game.guessEntries == game.currentPlayers) {
+                                game.startRound();
                             }
                         } else rulesBrokenHandler(foundPlayer, event);
                     }

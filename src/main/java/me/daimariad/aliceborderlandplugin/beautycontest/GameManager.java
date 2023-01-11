@@ -21,7 +21,7 @@ public class GameManager implements Listener {
     AliceBorderlandPlugin instance;
     GuessingManager guessingInstance;
 
-    final Integer maxPlayers = 2;
+    Integer currentPlayers = 5;
 
     public GameManager(AliceBorderlandPlugin instance, GuessingManager guessingInstance) {
         this.instance = instance;
@@ -57,6 +57,21 @@ public class GameManager implements Listener {
         hasStarted = true;
     }
 
+    public void startRound() {
+        switch (currentPlayers) {
+            case 5:
+                firstRoundHandler();
+            case 4:
+                secondRoundHandler();
+            case 3:
+                thirdRoundHandler();
+            case 2:
+                finalRoundHandler();
+            default:
+                break;
+        }
+    }
+
     public UUID getAvgRoundWinner(double answer, HashMap<UUID, Contestant> validPlayers) {
         if (validPlayers.size() >= 1) {
             Iterator<Map.Entry<UUID, Contestant>> contestantIt = validPlayers.entrySet().iterator();
@@ -79,6 +94,18 @@ public class GameManager implements Listener {
         return null;
     }
 
+    public UUID getFinalRoundWinner(double answer) {
+        Iterator<Map.Entry<UUID, Contestant>> contestantIt = players.entrySet().iterator();
+        Map.Entry<UUID, Contestant> firstCon = contestantIt.next();
+        Map.Entry<UUID, Contestant> secondCon = contestantIt.next();
+
+        if (firstCon.getValue().getGuessNumber() == 0 && secondCon.getValue().getGuessNumber() == 100) {
+            return secondCon.getKey();
+        } else if (firstCon.getValue().getGuessNumber() == 100 && secondCon.getValue().getGuessNumber() == 0) {
+            return secondCon.getKey();
+        }
+        return getAvgRoundWinner(answer, players);
+    }
     public UUID getSecondRoundWinner(double answer) {
         // Applying second rule of the game
         // If there are 2 people or more choose the same number, the number they choose becomes invalid
@@ -112,16 +139,72 @@ public class GameManager implements Listener {
         for (Contestant contestant : theFallen) {
             contestant.getBoard().delete();
             players.remove(contestant.getPlayer().getUniqueId());
+            currentPlayers -= 1;
         }
     }
 
-    public void thirdRoundHandler () {
-        Integer currentSizePlayers = players.size();
+    public void finalRoundHandler() {
         Double answer = 0.0;
         for (Contestant contestant : players.values()) {
             answer += contestant.getGuessNumber();
         }
-        answer *= 0.8/currentSizePlayers;
+        answer *= 0.8/currentPlayers;
+        UUID winner = getFinalRoundWinner(answer);
+
+        boolean someoneLost = false;
+        ArrayList<Contestant> theFallen = new ArrayList<>();
+
+        for (Contestant contestant : players.values()) {
+            if (winner != null && contestant.getPlayer().getUniqueId() == winner) contestant.increasePoints();
+            else {
+                contestant.decreasePoints();
+                if (contestant.getPoints() <= -10) {
+                    gameOver(contestant);
+                    theFallen.add(contestant);
+                    someoneLost = true;
+                }
+            }
+        }
+
+        for (Contestant player : players.values()) {
+            ArrayList<String> lines = new ArrayList<>();
+
+            lines.add("");
+            lines.add(ChatColor.GREEN + "Scores:");
+            lines.add("");
+            for (Contestant contestant : players.values()) {
+                lines.add(ChatColor.GOLD + contestant.getPlayer().getName() + ": " + contestant.getPoints());
+            }
+            player.getBoard().updateLines(lines);
+        }
+
+        cleanFallenHandler(theFallen);
+        roundResetHandler();
+        if (someoneLost) {
+            // Forth round starts.
+            if (currentPlayers == 1) {
+                // Logic here if there is already a winner from the start of first round.
+                Player finalWinner = players.get(winner).getPlayer();
+                finalWinner.getServer().broadcastMessage(ChatColor.BLUE + finalWinner.getName() + ChatColor.WHITE + " is the winner of the " + ChatColor.RED + "beauty contest #" + gameId.getAndIncrement());
+                scheduler.runTask(instance, () -> {
+                    finalWinner.getWorld().spawnEntity(finalWinner.getLocation(), EntityType.FIREWORK);
+                });
+                // Removing winner from players list since game has ended.
+                players.get(winner).getBoard().delete();
+                players.remove(winner);
+                this.guessingInstance.cleanGame(gameId.intValue());
+            }
+            return;
+        }
+        finalRoundHandler();
+    }
+
+    public void thirdRoundHandler () {
+        Double answer = 0.0;
+        for (Contestant contestant : players.values()) {
+            answer += contestant.getGuessNumber();
+        }
+        answer *= 0.8/currentPlayers;
         UUID winner = getSecondRoundWinner(answer);
         Integer winnerGuess = players.get(winner).getGuessNumber();
         boolean exactGuess = winnerGuess.compareTo(answer.intValue()) == 0;
@@ -157,8 +240,7 @@ public class GameManager implements Listener {
         roundResetHandler();
         if (someoneLost) {
             // Forth round starts.
-            System.out.println(players.size());
-            if (players.size() == 1) {
+            if (currentPlayers == 1) {
                 // Logic here if there is already a winner from the start of first round.
                 Player finalWinner = players.get(winner).getPlayer();
                 finalWinner.getServer().broadcastMessage(ChatColor.BLUE + finalWinner.getName() + ChatColor.WHITE + " is the winner of the " + ChatColor.RED + "beauty contest #" + gameId.getAndIncrement());
@@ -168,7 +250,6 @@ public class GameManager implements Listener {
                 // Removing winner from players list since game has ended.
                 players.get(winner).getBoard().delete();
                 players.remove(winner);
-                hasStarted = false;
                 this.guessingInstance.cleanGame(gameId.intValue());
             }
             return;
@@ -177,12 +258,11 @@ public class GameManager implements Listener {
     }
 
     public void secondRoundHandler () {
-        Integer currentSizePlayers = players.size();
         Double answer = 0.0;
         for (Contestant contestant : players.values()) {
             answer += contestant.getGuessNumber();
         }
-        answer *= 0.8/currentSizePlayers;
+        answer *= 0.8/currentPlayers;
         UUID winner = getSecondRoundWinner(answer);
 
         boolean someoneLost = false;
@@ -215,7 +295,7 @@ public class GameManager implements Listener {
         roundResetHandler();
         if (someoneLost) {
             // Third round starts.
-            if (players.size() == 1) {
+            if (currentPlayers == 1) {
                 // Logic here if there is already a winner from the start of first round.
                 Player finalWinner = players.get(winner).getPlayer();
                 finalWinner.getServer().broadcastMessage(ChatColor.BLUE + finalWinner.getName() + ChatColor.WHITE + " is the winner of the " + ChatColor.RED + "beauty contest #" + gameId.getAndIncrement());
@@ -225,7 +305,6 @@ public class GameManager implements Listener {
                 // Removing winner from players list since game has ended.
                 players.get(winner).getBoard().delete();
                 players.remove(winner);
-                hasStarted = false;
                 this.guessingInstance.cleanGame(gameId.intValue());
             }
             return;
@@ -237,7 +316,7 @@ public class GameManager implements Listener {
         for (Contestant contestant : players.values()) {
             answer += contestant.getGuessNumber();
         }
-        answer *= 0.8/maxPlayers;
+        answer *= 0.8/currentPlayers;
         UUID winner = getAvgRoundWinner(answer, players);
 
         boolean someoneLost = false;
@@ -270,7 +349,7 @@ public class GameManager implements Listener {
         roundResetHandler();
         if (someoneLost) {
             // Second round starts.
-            if (players.size() == 1) {
+            if (currentPlayers == 1) {
                 // Logic here if there is already a winner from the start of first round.
                 Player finalWinner = players.get(winner).getPlayer();
                 finalWinner.getServer().broadcastMessage(ChatColor.BLUE + finalWinner.getName() + ChatColor.WHITE + " is the winner of the " + ChatColor.RED + "beauty contest #" + gameId.getAndIncrement());
@@ -280,10 +359,7 @@ public class GameManager implements Listener {
                 // Removing winner from players list since game has ended.
                 players.get(winner).getBoard().delete();
                 players.remove(winner);
-                hasStarted = false;
                 this.guessingInstance.cleanGame(gameId.intValue());
-            } else {
-                secondRoundHandler();
             }
             return;
         }
